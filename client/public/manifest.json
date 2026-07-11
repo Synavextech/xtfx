@@ -1,0 +1,22 @@
+{
+  "name": "Xfx ExtremeTrader",
+  "short_name": "Xfx",
+  "description": "Extreme Trader - Forex, Cryptos, Synthetics 24/7",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111112",
+  "theme_color": "#2962FF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

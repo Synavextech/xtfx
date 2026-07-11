@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+}
+
+@keyframes flash-profit {
+  0% {
+    background-color: rgba(8, 153, 129, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes flash-loss {
+  0% {
+    background-color: rgba(242, 54, 69, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes slide-in {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-flash-profit {
+  animation: flash-profit 0.8s ease-out;
+}
+
+.animate-flash-loss {
+  animation: flash-loss 0.8s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Glassmorphism custom components */
+.glass-panel {
+  background: rgba(30, 34, 45, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(42, 46, 57, 0.4);
+}
+
+.light .glass-panel {
+  background: rgba(248, 249, 250, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(224, 227, 235, 0.4);
+}
+
+/* Custom scrollbars for trading UI */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2e39;
+  border-radius: 2px;
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: #e0e3eb;
+}
+
+/* Infinite Marquee Scrolling Animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
