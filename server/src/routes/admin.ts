@@ -87,6 +87,12 @@ export default async function adminRoutes(fastify: FastifyInstance) {
             .from('wallets')
             .update({ balance: newP2pBalance })
             .eq('id', p2pWallet.id);
+
+          // Update the transaction record amount to the 1.10x scaled value so it is logged correctly in transaction history
+          await supabaseAdmin
+            .from('transactions')
+            .update({ amount: depositCredit })
+            .eq('id', transactionId);
         }
       } else {
         // Standard trader/user get credited in their REAL wallet

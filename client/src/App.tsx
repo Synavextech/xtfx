@@ -9,6 +9,8 @@ import Admindashboard from './pages/Admindashboard';
 import P2p from './pages/P2p';
 import Profile from './pages/Profile';
 import Terms from './pages/Terms';
+import Insights from './pages/Insights';
+import Transactions from './pages/Transactions';
 
 // Toast system declaration
 type ToastType = 'success' | 'error' | 'info';
@@ -170,6 +172,8 @@ export default function App() {
           <Route path="/admin" element={user && user.role === 'admin' ? <Admindashboard toggleTheme={toggleTheme} theme={theme} /> : <Navigate to="/" />} />
           <Route path="/p2p" element={user ? <P2p toggleTheme={toggleTheme} theme={theme} /> : <Navigate to="/auth" />} />
           <Route path="/profile" element={user ? <Profile toggleTheme={toggleTheme} theme={theme} /> : <Navigate to="/auth" />} />
+          <Route path="/insights" element={user ? <Insights toggleTheme={toggleTheme} theme={theme} /> : <Navigate to="/auth" />} />
+          <Route path="/transactions" element={user ? <Transactions toggleTheme={toggleTheme} theme={theme} /> : <Navigate to="/auth" />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

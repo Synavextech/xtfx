@@ -661,4 +661,105 @@ export default async function p2pRoutes(fastify: FastifyInstance) {
 
     return { success: true };
   });
+
+  // 12. Update P2P Offer
+  fastify.put('/api/p2p/offers/:id', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as any;
+    const { amount, minLimit, maxLimit, paymentMethod } = request.body as any;
+    const user = request.user!;
+
+    if (!amount || amount <= 0 || !minLimit || !maxLimit || !paymentMethod) {
+      return reply.code(400).send({ error: 'All offer fields (amount, minLimit, maxLimit, paymentMethod) are required' });
+    }
+
+    const { data: offer } = await supabaseAdmin
+      .from('p2p_offers')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!offer) {
+      return reply.code(404).send({ error: 'Offer not found' });
+    }
+
+    if (offer.broker_id !== user.id && user.role !== 'admin') {
+      return reply.code(403).send({ error: 'Forbidden: You can only edit your own offers' });
+    }
+
+    if (offer.status !== 'active') {
+      return reply.code(400).send({ error: 'Only active offers can be edited' });
+    }
+
+    // Check if seller has enough balance for the new amount
+    if (offer.type === 'sell') {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      const isBroker = profile?.role === 'broker';
+      const walletType = isBroker ? 'p2p' : 'real';
+
+      const { data: wallet } = await supabaseAdmin
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', user.id)
+        .eq('type', walletType)
+        .single();
+
+      if (!wallet || Number(wallet.balance) < amount) {
+        return reply.code(400).send({ error: `Insufficient ${walletType} wallet balance to list this sell offer` });
+      }
+    }
+
+    const { data: updatedOffer, error } = await supabaseAdmin
+      .from('p2p_offers')
+      .update({
+        amount,
+        min_limit: minLimit,
+        max_limit: maxLimit,
+        payment_method: paymentMethod
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) return reply.code(500).send({ error: error.message });
+    return { success: true, offer: updatedOffer };
+  });
+
+  // 13. Cancel (Delete) P2P Offer
+  fastify.delete('/api/p2p/offers/:id', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as any;
+    const user = request.user!;
+
+    const { data: offer } = await supabaseAdmin
+      .from('p2p_offers')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!offer) {
+      return reply.code(404).send({ error: 'Offer not found' });
+    }
+
+    if (offer.broker_id !== user.id && user.role !== 'admin') {
+      return reply.code(403).send({ error: 'Forbidden: You can only cancel your own offers' });
+    }
+
+    if (offer.status !== 'active') {
+      return reply.code(400).send({ error: 'Offer is not active' });
+    }
+
+    const { data: cancelledOffer, error } = await supabaseAdmin
+      .from('p2p_offers')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) return reply.code(500).send({ error: error.message });
+    return { success: true, offer: cancelledOffer };
+  });
 }
+

@@ -587,6 +587,20 @@ export default async function walletRoutes(fastify: FastifyInstance) {
 
     if (tradesErr) return reply.code(500).send({ error: tradesErr.message });
 
+    const { data: p2pTrades, error: p2pErr } = await supabaseAdmin
+      .from('p2p_trades')
+      .select('*, p2p_offers(*)')
+      .eq('status', 'completed')
+      .or(`buyer_id.eq.${user.id},broker_id.eq.${user.id}`);
+
+    if (p2pErr) return reply.code(500).send({ error: p2pErr.message });
+
+    const p2pSells = (p2pTrades || []).filter(t => {
+      const isBuyOffer = t.p2p_offers?.type === 'buy';
+      const sellerId = isBuyOffer ? t.buyer_id : t.broker_id;
+      return sellerId === user.id;
+    });
+
     const mergedHistory = [
       ...(txs || []).map(t => ({
         id: t.id,
@@ -605,6 +619,15 @@ export default async function walletRoutes(fastify: FastifyInstance) {
         payment_method: t.asset,
         status: 'approved',
         approved_at: t.closed_at
+      })),
+      ...p2pSells.map(t => ({
+        id: t.id,
+        created_at: t.created_at,
+        type: 'p2p_sell',
+        amount: Number(t.amount),
+        payment_method: 'P2P Sale',
+        status: 'approved',
+        approved_at: t.created_at
       }))
     ];
 

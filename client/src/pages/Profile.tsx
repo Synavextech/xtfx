@@ -210,14 +210,14 @@ export default function Profile({ toggleTheme, theme }: ProfileProps) {
               {/* Navigation Links */}
               <div className="flex flex-col gap-2.5 text-xs font-semibold text-light-primary dark:text-[#D1D4DC]">
                 <Link
-                  to="/dashboard?modal=history"
+                  to="/transactions"
                   onClick={() => setShowMobileDrawer(false)}
                   className="text-left py-2 px-3 hover:bg-light-panel dark:hover:bg-[#2A2E39] rounded-xl flex items-center gap-2"
                 >
                   📁 Transaction History
                 </Link>
                 <Link
-                  to="/dashboard?modal=insights"
+                  to="/insights"
                   onClick={() => setShowMobileDrawer(false)}
                   className="text-left py-2 px-3 hover:bg-light-panel dark:hover:bg-[#2A2E39] rounded-xl flex items-center gap-2"
                 >
@@ -368,14 +368,14 @@ export default function Profile({ toggleTheme, theme }: ProfileProps) {
 
           {/* History & Insights shortcuts */}
           <Link
-            to="/dashboard?modal=history"
+            to="/transactions"
             className="hidden md:block px-3 py-2 bg-light-panel dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-primary dark:text-[#D1D4DC] font-bold rounded-xl text-xs hover:opacity-90 text-center"
           >
             History
           </Link>
 
           <Link
-            to="/dashboard?modal=insights"
+            to="/insights"
             className="hidden md:block px-3 py-2 bg-light-panel dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-primary dark:text-[#D1D4DC] font-bold rounded-xl text-xs hover:opacity-90 animate-pulse text-center"
           >
             Insights
@@ -442,7 +442,7 @@ export default function Profile({ toggleTheme, theme }: ProfileProps) {
                 </Link>
 
                 <Link
-                  to="/dashboard?modal=history"
+                  to="/transactions"
                   onClick={() => setShowProfileDropdown(false)}
                   className="w-full text-left py-2 px-3 hover:bg-light-panel dark:hover:bg-dark-panel rounded-xl text-xs font-bold text-light-primary dark:text-dark-primary flex items-center gap-2 text-center"
                 >

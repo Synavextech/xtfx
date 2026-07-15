@@ -70,6 +70,13 @@ export default function P2p({ toggleTheme, theme }: P2pProps) {
   // Top-up Modal states
   const [showTopupModal, setShowTopupModal] = useState(false);
 
+  // Edit offer states
+  const [editingOffer, setEditingOffer] = useState<P2POffer | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editMinLimit, setEditMinLimit] = useState('');
+  const [editMaxLimit, setEditMaxLimit] = useState('');
+  const [editPaymentMethod, setEditPaymentMethod] = useState('');
+
   // Broker onboarding deposit states
   const [depositMethod, setDepositMethod] = useState<'mpesa' | 'paypal' | 'stripe' | 'crypto'>('mpesa');
   const [depositAmount, setDepositAmount] = useState('1000');
@@ -145,6 +152,54 @@ export default function P2p({ toggleTheme, theme }: P2pProps) {
       setCryptoAddresses(res.data);
     } catch (err) {
       console.error('Failed to fetch crypto deposit addresses', err);
+    }
+  };
+
+  const handleEditOffer = (offer: P2POffer) => {
+    setEditingOffer(offer);
+    setEditAmount(String(offer.amount));
+    setEditMinLimit(String(offer.min_limit));
+    setEditMaxLimit(String(offer.max_limit));
+    setEditPaymentMethod(offer.payment_method);
+  };
+
+  const handleUpdateOfferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOffer) return;
+    const amountNum = parseFloat(editAmount);
+    const minNum = parseFloat(editMinLimit);
+    const maxNum = parseFloat(editMaxLimit);
+
+    if (!amountNum || amountNum <= 0 || !minNum || !maxNum || !editPaymentMethod) {
+      return showToast('Please enter valid fields', 'error');
+    }
+    if (minNum > maxNum) {
+      return showToast('Minimum limit cannot exceed maximum limit', 'error');
+    }
+
+    try {
+      await axios.put(`/api/p2p/offers/${editingOffer.id}`, {
+        amount: amountNum,
+        minLimit: minNum,
+        maxLimit: maxNum,
+        paymentMethod: editPaymentMethod
+      });
+      showToast('Offer updated successfully!', 'success');
+      setEditingOffer(null);
+      loadData();
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'Failed to update offer', 'error');
+    }
+  };
+
+  const handleDeleteOffer = async (offerId: string) => {
+    if (!window.confirm('Are you sure you want to cancel this offer?')) return;
+    try {
+      await axios.delete(`/api/p2p/offers/${offerId}`);
+      showToast('Offer cancelled successfully!', 'success');
+      loadData();
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'Failed to cancel offer', 'error');
     }
   };
 
@@ -609,14 +664,14 @@ export default function P2p({ toggleTheme, theme }: P2pProps) {
               {/* Navigation Links */}
               <div className="flex flex-col gap-2.5 text-xs font-semibold text-light-primary dark:text-[#D1D4DC]">
                 <Link
-                  to="/dashboard?modal=history"
+                  to="/transactions"
                   onClick={() => setShowMobileDrawer(false)}
                   className="text-left py-2 px-3 hover:bg-light-panel dark:hover:bg-[#2A2E39] rounded-xl flex items-center gap-2"
                 >
                   📁 Transaction History
                 </Link>
                 <Link
-                  to="/dashboard?modal=insights"
+                  to="/insights"
                   onClick={() => setShowMobileDrawer(false)}
                   className="text-left py-2 px-3 hover:bg-light-panel dark:hover:bg-[#2A2E39] rounded-xl flex items-center gap-2"
                 >
@@ -767,14 +822,14 @@ export default function P2p({ toggleTheme, theme }: P2pProps) {
 
           {/* History & Insights shortcuts */}
           <Link
-            to="/dashboard?modal=history"
+            to="/transactions"
             className="hidden md:block px-3 py-2 bg-light-panel dark:bg-dark-bg border border-light-border dark:border-[#2A2E39] text-light-primary dark:text-[#D1D4DC] font-bold rounded-xl text-xs hover:opacity-90 text-center"
           >
             History
           </Link>
 
           <Link
-            to="/dashboard?modal=insights"
+            to="/insights"
             className="hidden md:block px-3 py-2 bg-light-panel dark:bg-dark-bg border border-light-border dark:border-[#2A2E39] text-light-primary dark:text-[#D1D4DC] font-bold rounded-xl text-xs hover:opacity-90 animate-pulse text-center"
           >
             Insights
@@ -841,7 +896,7 @@ export default function P2p({ toggleTheme, theme }: P2pProps) {
                 </Link>
 
                 <Link
-                  to="/dashboard?modal=history"
+                  to="/transactions"
                   onClick={() => setShowProfileDropdown(false)}
                   className="w-full text-left py-2 px-3 hover:bg-light-panel dark:hover:bg-[#2A2E39] rounded-xl text-xs font-bold text-light-primary dark:text-[#D1D4DC] flex items-center gap-2 text-center"
                 >
@@ -1271,17 +1326,91 @@ export default function P2p({ toggleTheme, theme }: P2pProps) {
                     {p2pOffers.filter(o => o.broker_id === user.id).length === 0 ? (
                       <p className="text-xs text-light-secondary dark:text-dark-secondary p-4 bg-light-panel dark:bg-dark-bg/20 rounded-xl">No active offers listed by you.</p>
                     ) : (
-                      p2pOffers.filter(o => o.broker_id === user.id).map(o => (
-                        <div key={o.id} className="p-4 bg-light-panel dark:bg-dark-bg/20 border border-light-border dark:border-[#2A2E39] rounded-xl flex justify-between items-center">
-                          <div>
-                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.25 rounded mr-2 ${o.type === 'sell' ? 'bg-[#F23645]/15 text-[#F23645]' : 'bg-[#089981]/15 text-[#089981]'}`}>
-                              {o.type}
-                            </span>
-                            <span className="font-mono text-light-primary dark:text-white text-xs font-bold">${o.amount}</span>
-                            <p className="text-[9px] text-light-secondary dark:text-[#8A91A5] mt-1">Limits: ${o.min_limit} - ${o.max_limit} | Payment: {o.payment_method}</p>
+                      p2pOffers.filter(o => o.broker_id === user.id).map(o => {
+                        const isEditing = editingOffer && editingOffer.id === o.id;
+                        if (isEditing) {
+                          return (
+                            <form key={o.id} onSubmit={handleUpdateOfferSubmit} className="p-4 bg-light-panel dark:bg-[#1E222D] border border-[#2962FF]/50 rounded-xl space-y-3">
+                              <div className="flex justify-between items-center pb-2 border-b border-light-border dark:border-[#2A2E39]">
+                                <span className="text-[10px] font-extrabold text-[#2962FF] uppercase">Editing P2P Offer</span>
+                                <button type="button" onClick={() => setEditingOffer(null)} className="text-xs text-light-secondary dark:text-dark-secondary hover:text-white">✕</button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-[9px] font-bold text-[#8A91A5] uppercase">Total Offer ($)</label>
+                                  <input
+                                    type="number"
+                                    value={editAmount}
+                                    onChange={(e) => setEditAmount(e.target.value)}
+                                    className="w-full px-2.5 py-1.5 bg-light-bg dark:bg-[#111112] border border-light-border dark:border-[#2A2E39] rounded-lg text-xs font-bold text-light-primary dark:text-white"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-[#8A91A5] uppercase">Payment Method</label>
+                                  <input
+                                    type="text"
+                                    value={editPaymentMethod}
+                                    onChange={(e) => setEditPaymentMethod(e.target.value)}
+                                    className="w-full px-2.5 py-1.5 bg-light-bg dark:bg-[#111112] border border-light-border dark:border-[#2A2E39] rounded-lg text-xs font-bold text-light-primary dark:text-white"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-[#8A91A5] uppercase">Min Limit ($)</label>
+                                  <input
+                                    type="number"
+                                    value={editMinLimit}
+                                    onChange={(e) => setEditMinLimit(e.target.value)}
+                                    className="w-full px-2.5 py-1.5 bg-light-bg dark:bg-[#111112] border border-light-border dark:border-[#2A2E39] rounded-lg text-xs font-bold text-light-primary dark:text-white"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-[#8A91A5] uppercase">Max Limit ($)</label>
+                                  <input
+                                    type="number"
+                                    value={editMaxLimit}
+                                    onChange={(e) => setEditMaxLimit(e.target.value)}
+                                    className="w-full px-2.5 py-1.5 bg-light-bg dark:bg-[#111112] border border-light-border dark:border-[#2A2E39] rounded-lg text-xs font-bold text-light-primary dark:text-white"
+                                    required
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex gap-2 justify-end pt-1">
+                                <button type="button" onClick={() => setEditingOffer(null)} className="px-3 py-1 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-[#2A2E39] text-light-secondary dark:text-dark-secondary rounded-lg text-[10px] font-bold">Cancel</button>
+                                <button type="submit" className="px-3 py-1 bg-[#2962FF] text-white rounded-lg text-[10px] font-bold">Save</button>
+                              </div>
+                            </form>
+                          );
+                        }
+
+                        return (
+                          <div key={o.id} className="p-4 bg-light-panel dark:bg-dark-bg/20 border border-light-border dark:border-[#2A2E39] rounded-xl flex justify-between items-center">
+                            <div>
+                              <span className={`text-[9px] font-bold uppercase px-1.5 py-0.25 rounded mr-2 ${o.type === 'sell' ? 'bg-[#F23645]/15 text-[#F23645]' : 'bg-[#089981]/15 text-[#089981]'}`}>
+                                {o.type}
+                              </span>
+                              <span className="font-mono text-light-primary dark:text-white text-xs font-bold">${o.amount}</span>
+                              <p className="text-[9px] text-light-secondary dark:text-[#8A91A5] mt-1">Limits: ${o.min_limit} - ${o.max_limit} | Payment: {o.payment_method}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditOffer(o)}
+                                className="px-2.5 py-1 bg-light-panel dark:bg-dark-bg border border-light-border dark:border-[#2A2E39] text-light-secondary dark:text-dark-secondary hover:text-light-primary dark:hover:text-white rounded-lg text-[10px] font-bold transition-all"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteOffer(o.id)}
+                                className="px-2.5 py-1 bg-[#F23645]/10 hover:bg-[#F23645]/20 text-[#F23645] rounded-lg text-[10px] font-bold transition-all"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
