@@ -1,7 +1,6 @@
 const CACHE_NAME = 'xfx-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
-  '/index.html',
   '/manifest.json',
   '/favicon.svg'
 ];
@@ -31,9 +30,38 @@ self.addEventListener('fetch', (event) => {
     return; // Let the browser handle the request naturally
   }
 
+  // Network-First strategy for navigate requests (index.html, etc.) to ensure updated build hashes
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request) || caches.match('/');
+        })
+    );
+    return;
+  }
+
+  // Cache-First with Network fallback and error safety for static assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
+      return cachedResponse || fetch(event.request).catch((err) => {
+        console.error('ServiceWorker fetch failed:', err);
+        // Return a basic error response instead of throwing inside respondWith
+        return new Response('Network error occurred', {
+          status: 408,
+          statusText: 'Network Error',
+          headers: new Headers({ 'Content-Type': 'text/plain' })
+        });
+      });
     })
   );
 });

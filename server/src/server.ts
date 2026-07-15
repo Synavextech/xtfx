@@ -17,7 +17,7 @@ import insightsRoutes from './routes/insights';
 import chatRoutes from './routes/chat';
 
 // Import engine tasks
-import { initRedisData, loadActiveTrades, startEngineTick, redis } from './engine';
+import { initRedisData, loadActiveTrades, startEngineTick, redis, registerTrade, deregisterTrade } from './engine';
 
 dotenv.config();
 
@@ -59,8 +59,8 @@ app.register(fastifyStatic, {
 
 // Fallback all non-API calls to index.html for React Router (SPA support)
 app.setNotFoundHandler((request, reply) => {
-  if (request.raw.url?.startsWith('/api')) {
-    reply.code(404).send({ error: 'API Route Not Found' });
+  if (request.raw.url?.startsWith('/api') || request.raw.url?.includes('/assets/')) {
+    reply.code(404).send({ error: 'Resource Not Found' });
   } else {
     reply.sendFile('index.html');
   }
@@ -108,7 +108,8 @@ wsApp.ws('/*', {
 
 
 // 3. Setup Redis Subscriber Client for Notifications and Ticks
-const shouldRunEngine = process.env.RUN_ENGINE !== 'false';
+const isPrimaryInstance = !process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0';
+const shouldRunEngine = process.env.RUN_ENGINE !== 'false' && isPrimaryInstance;
 const subRedis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 subRedis.subscribe('xfx:notifications', 'xfx:ticks');
@@ -122,6 +123,28 @@ subRedis.on('message', (channel, message) => {
       const data = JSON.parse(message);
       // Publish user notifications directly to their authenticated WS topic
       wsApp.publish(`user/${data.userId}`, message);
+
+      // Sync in-memory trades across cluster workers
+      if (data.type === 'trade_placed') {
+        const t = data.trade;
+        registerTrade({
+          id: t.id,
+          user_id: t.user_id,
+          wallet_id: t.wallet_id,
+          asset: t.asset,
+          type: t.type as 'buy' | 'sell',
+          quantity: Number(t.quantity),
+          entry_price: Number(t.entry_price),
+          stop_loss: t.stop_loss ? Number(t.stop_loss) : null,
+          take_profit: t.take_profit ? Number(t.take_profit) : null,
+          duration: t.duration ? Number(t.duration) : null,
+          created_at: t.created_at,
+          target_outcome: t.target_outcome,
+          win_multiplier: t.win_multiplier ? Number(t.win_multiplier) : undefined
+        });
+      } else if (data.type === 'trade_closed') {
+        deregisterTrade(data.tradeId);
+      }
     }
   } catch (err) {
     console.error('Redis subscriber message handle error:', err);

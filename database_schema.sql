@@ -44,14 +44,14 @@ CREATE TABLE IF NOT EXISTS public.trades (
     wallet_id UUID NOT NULL REFERENCES public.wallets(id) ON DELETE CASCADE,
     asset TEXT NOT NULL,
     type TEXT NOT NULL CHECK (type IN ('buy', 'sell')),
-    quantity NUMERIC(15,6) NOT NULL,
-    entry_price NUMERIC(15,6) NOT NULL,
-    exit_price NUMERIC(15,6),
+    quantity NUMERIC(25,8) NOT NULL,
+    entry_price NUMERIC(25,8) NOT NULL,
+    exit_price NUMERIC(25,8),
     status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
     duration INTEGER, -- In seconds, closes automatically when elapses
-    stop_loss NUMERIC(15,6),
-    take_profit NUMERIC(15,6),
-    profit_loss NUMERIC(15,6) DEFAULT 0.00,
+    stop_loss NUMERIC(25,8),
+    take_profit NUMERIC(25,8),
+    profit_loss NUMERIC(25,8) DEFAULT 0.00,
     closed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

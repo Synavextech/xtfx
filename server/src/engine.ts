@@ -227,14 +227,21 @@ export async function loadActiveTrades() {
   console.log(`Loaded ${activeTrades.length} active trades from database.`);
 }
 
-// Register a new trade in the engine
+// Register a new trade in the engine (idempotent)
 export function registerTrade(trade: ActiveTrade) {
-  activeTrades.push(trade);
+  if (!activeTrades.some(t => t.id === trade.id)) {
+    activeTrades.push(trade);
+    console.log(`[Engine] Trade ${trade.id} registered in memory.`);
+  }
 }
 
-// Deregister trade
+// Deregister trade (idempotent)
 export function deregisterTrade(tradeId: string) {
+  const initialLength = activeTrades.length;
   activeTrades = activeTrades.filter(t => t.id !== tradeId);
+  if (activeTrades.length < initialLength) {
+    console.log(`[Engine] Trade ${tradeId} deregistered from memory.`);
+  }
 }
 
 // Close an active trade in Supabase and update user's wallet

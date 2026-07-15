@@ -29,8 +29,17 @@ export default async function tradeRoutes(fastify: FastifyInstance) {
     const { walletType, asset, type, quantity, stopLoss, takeProfit, duration } = request.body as any;
     const user = request.user!;
 
-    if (!asset || !type || !quantity || !['buy', 'sell'].includes(type) || !['real', 'demo'].includes(walletType)) {
+    if (!asset || !type || quantity === undefined || quantity === null || !['buy', 'sell'].includes(type) || !['real', 'demo'].includes(walletType)) {
       return reply.code(400).send({ error: 'Invalid trade parameters' });
+    }
+
+    const qtyVal = Number(quantity);
+    if (isNaN(qtyVal) || qtyVal <= 0) {
+      return reply.code(400).send({ error: 'Quantity must be a positive number' });
+    }
+
+    if (qtyVal > 1e16) {
+      return reply.code(400).send({ error: 'Quantity is too large (numeric limits exceeded)' });
     }
 
     // Find asset configuration
@@ -212,7 +221,11 @@ export default async function tradeRoutes(fastify: FastifyInstance) {
       await redis.publish('xfx:notifications', JSON.stringify({
         type: 'trade_placed',
         userId: user.id,
-        trade: dbTrade
+        trade: {
+          ...dbTrade,
+          target_outcome: outcome,
+          win_multiplier: winMultiplier
+        }
       }));
 
       return { success: true, trade: dbTrade };
