@@ -83,8 +83,9 @@ export default function Footer() {
             <strong className="text-[#D1D4DC]">Extreme Risk Warning:</strong> Complex instruments come with a high risk of losing money rapidly due to leverage. 78.48% of retail investor accounts lose money when trading with this provider. You should consider whether you understand how the product works and whether you can afford to take the high risk of losing your money.
           </div>
         </div>
-        <p className="text-[10px] text-[#8A91A5]/60 text-center mt-4">
-          © {new Date().getFullYear()} ExtFx - ExtremeFxTrader. All rights reserved. Registered brokerage.
+        <p className="text-[10px] text-[#8A91A5]/60 text-center mt-4 leading-relaxed">
+          © {new Date().getFullYear()} ExtFx - ExtremeFxTrader. All rights reserved. Registered brokerage.<br />
+          Operated under Xfx. Brokers | Address: 50 Staniford Street, Boston, Massachusetts | Email: info@extfx.com
         </p>
       </div>
     </footer>

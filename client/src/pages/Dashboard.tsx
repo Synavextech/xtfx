@@ -1776,8 +1776,9 @@ export default function Dashboard({ toggleTheme, theme }: DashboardProps) {
           <a href="https://facebook.com/xfx" target="_blank" rel="noreferrer" className="hover:underline">Facebook</a>
           <a href="https://twitter.com/xfx" target="_blank" rel="noreferrer" className="hover:underline">Twitter / X</a>
         </div>
-        <div>
-          © 2026 ExtFx - ExtremeFxTrader. All rights reserved.
+        <div className="leading-relaxed">
+          © 2026 ExtFx - ExtremeFxTrader. All rights reserved. <br />
+          Operated under Xfx. Brokers | Address: 50 Staniford Street, Boston, Massachusetts | Email: info@extfx.com
         </div>
       </footer>
 
