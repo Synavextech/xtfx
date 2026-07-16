@@ -111,19 +111,11 @@ export default async function tradeRoutes(fastify: FastifyInstance) {
           return reply.code(400).send({ error: 'For SELL positions, Take Profit must be less than the entry price' });
         }
       }
-
-      // 3. Calculate margin needed
-      // Quantity acts as the trade volume. Let's say leverage is 1:100.
-      // Margin = (Quantity * EntryPrice) / 100.
-      // For synthetic indices, we can calculate differently, but let's keep a standard margin of 1% of trade value.
       const leverage = 100;
       const marginRequired = Number(((quantity * entryPrice) / leverage).toFixed(2));
-
-      // Calculate current floating equity
-      // Equity = balance + floating PnL
       let floatingPnl = 0;
       const userActiveTrades = activeTrades.filter(t => t.user_id === user.id && t.wallet_id === wallet.id);
-      
+
       for (const t of userActiveTrades) {
         const livePriceStr = await redis.get(`xfx:asset:${t.asset}:price`);
         if (livePriceStr) {
@@ -135,7 +127,7 @@ export default async function tradeRoutes(fastify: FastifyInstance) {
 
       const balance = Number(wallet.balance);
       const equity = balance + floatingPnl;
-      
+
       // Free Margin = Equity - Total Margin Used
       let totalMarginUsed = 0;
       userActiveTrades.forEach(t => {
@@ -304,10 +296,10 @@ export default async function tradeRoutes(fastify: FastifyInstance) {
   // 4. Get active positions
   fastify.get('/api/trades/active', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user!;
-    
+
     // Return positions from memory
     const userTrades = activeTrades.filter(t => t.user_id === user.id);
-    
+
     // Add current live price and floating PnL to response
     const tradesWithLiveStats = [];
     for (const t of userTrades) {
@@ -315,7 +307,7 @@ export default async function tradeRoutes(fastify: FastifyInstance) {
       const livePrice = priceStr ? parseFloat(priceStr) : t.entry_price;
       const diff = livePrice - t.entry_price;
       const pnl = Number((t.type === 'buy' ? diff * t.quantity : -diff * t.quantity).toFixed(2));
-      
+
       tradesWithLiveStats.push({
         ...t,
         livePrice,

@@ -244,98 +244,110 @@ export function deregisterTrade(tradeId: string) {
   }
 }
 
+// Track trades currently undergoing settlement to prevent double-closing or concurrent race conditions
+const closingTrades = new Set<string>();
+
 // Close an active trade in Supabase and update user's wallet
 export async function closeTrade(tradeId: string, exitPrice: number, pnl: number, reason: string = 'manual') {
+  if (closingTrades.has(tradeId)) return;
+
   // Find active trade details
   const tradeIndex = activeTrades.findIndex(t => t.id === tradeId);
   if (tradeIndex === -1) return;
   const trade = activeTrades[tradeIndex];
 
+  closingTrades.add(tradeId);
+
   // Overwrite exitPrice and PnL for deterministic synthetic cycle
   let finalExitPrice = exitPrice;
   let finalPnl = pnl;
 
-  const assetConfig = ASSETS.find(a => a.symbol === trade.asset);
-  if (assetConfig && assetConfig.category === 'synthetic' && trade.target_outcome && reason === 'duration_expiry') {
-    const investment = (trade.quantity * trade.entry_price) / 100;
-    if (trade.target_outcome === 'win') {
-      const mult = trade.win_multiplier || 0.05;
-      finalPnl = Number((investment * mult).toFixed(2));
-    } else {
-      finalPnl = Number((-investment).toFixed(2));
+  try {
+    const assetConfig = ASSETS.find(a => a.symbol === trade.asset);
+    if (assetConfig && assetConfig.category === 'synthetic' && trade.target_outcome && reason === 'duration_expiry') {
+      const investment = (trade.quantity * trade.entry_price) / 100;
+      if (trade.target_outcome === 'win') {
+        const mult = trade.win_multiplier || 0.05;
+        finalPnl = Number((investment * mult).toFixed(2));
+      } else {
+        finalPnl = Number((-investment).toFixed(2));
+      }
+
+      if (trade.type === 'buy') {
+        finalExitPrice = trade.entry_price + (finalPnl / trade.quantity);
+      } else {
+        finalExitPrice = trade.entry_price - (finalPnl / trade.quantity);
+      }
+      finalExitPrice = Number(finalExitPrice.toFixed(assetConfig.decimals));
     }
 
-    if (trade.type === 'buy') {
-      finalExitPrice = trade.entry_price + (finalPnl / trade.quantity);
-    } else {
-      finalExitPrice = trade.entry_price - (finalPnl / trade.quantity);
+    console.log(`Closing trade ${tradeId} (${trade.asset}) at ${finalExitPrice} due to ${reason}. PnL: ${finalPnl}`);
+
+    // Fetch wallet balance
+    const { data: wallet, error: walletErr } = await supabaseAdmin
+      .from('wallets')
+      .select('balance')
+      .eq('id', trade.wallet_id)
+      .single();
+
+    if (walletErr || !wallet) {
+      throw new Error(`Failed to fetch wallet ${trade.wallet_id} for closing trade: ${walletErr?.message || 'Not found'}`);
     }
-    finalExitPrice = Number(finalExitPrice.toFixed(assetConfig.decimals));
+
+    const currentBalance = Number(wallet.balance);
+    const newBalance = Math.max(0, Number((currentBalance + finalPnl).toFixed(2)));
+
+    // Update trade status in Supabase (settled state tracker)
+    const { error: tradeUpdateErr } = await supabaseAdmin
+      .from('trades')
+      .update({
+        status: 'closed',
+        exit_price: finalExitPrice,
+        profit_loss: finalPnl,
+        closed_at: new Date().toISOString()
+      })
+      .eq('id', tradeId);
+
+    if (tradeUpdateErr) {
+      throw new Error(`Failed to update trade status to closed: ${tradeUpdateErr.message}`);
+    }
+
+    // Update wallet balance in DB
+    const { error: walletUpdateErr } = await supabaseAdmin
+      .from('wallets')
+      .update({ balance: newBalance })
+      .eq('id', trade.wallet_id);
+
+    if (walletUpdateErr) {
+      throw new Error(`Failed to update wallet balance: ${walletUpdateErr.message}`);
+    }
+
+    // Only remove from memory after database transaction succeeds
+    const finalIndex = activeTrades.findIndex(t => t.id === tradeId);
+    if (finalIndex !== -1) {
+      activeTrades.splice(finalIndex, 1);
+    }
+
+    // Clean up Redis metadata
+    await redis.del(`xfx:trade:${tradeId}:meta`);
+
+    // Publish notification over Redis
+    const closeMessage = {
+      type: 'trade_closed',
+      userId: trade.user_id,
+      tradeId,
+      pnl: finalPnl,
+      newBalance,
+      asset: trade.asset,
+      exitPrice: finalExitPrice,
+      reason
+    };
+    await redis.publish('xfx:notifications', JSON.stringify(closeMessage));
+  } catch (err: any) {
+    console.error(`[Engine] Error closing trade ${tradeId}:`, err.message);
+  } finally {
+    closingTrades.delete(tradeId);
   }
-
-  console.log(`Closing trade ${tradeId} (${trade.asset}) at ${finalExitPrice} due to ${reason}. PnL: ${finalPnl}`);
-
-  // 1. Remove from active engine memory
-  activeTrades.splice(tradeIndex, 1);
-
-  // Clean up Redis metadata
-  await redis.del(`xfx:trade:${tradeId}:meta`);
-
-  // 2. Perform database updates in a single transaction-like sequence (settle state)
-  // Fetch wallet balance
-  const { data: wallet, error: walletErr } = await supabaseAdmin
-    .from('wallets')
-    .select('balance')
-    .eq('id', trade.wallet_id)
-    .single();
-
-  if (walletErr || !wallet) {
-    console.error(`Failed to fetch wallet ${trade.wallet_id} for closing trade`, walletErr?.message);
-    return;
-  }
-
-  const currentBalance = Number(wallet.balance);
-  const newBalance = Math.max(0, Number((currentBalance + finalPnl).toFixed(2)));
-
-  // Update trade status
-  const { error: tradeUpdateErr } = await supabaseAdmin
-    .from('trades')
-    .update({
-      status: 'closed',
-      exit_price: finalExitPrice,
-      profit_loss: finalPnl,
-      closed_at: new Date().toISOString()
-    })
-    .eq('id', tradeId);
-
-  if (tradeUpdateErr) {
-    console.error(`Error updating trade ${tradeId} to closed:`, tradeUpdateErr.message);
-    return;
-  }
-
-  // Update wallet balance
-  const { error: walletUpdateErr } = await supabaseAdmin
-    .from('wallets')
-    .update({ balance: newBalance })
-    .eq('id', trade.wallet_id);
-
-  if (walletUpdateErr) {
-    console.error(`Error updating wallet ${trade.wallet_id} balance:`, walletUpdateErr.message);
-    return;
-  }
-
-  // Publish notification over Redis
-  const closeMessage = {
-    type: 'trade_closed',
-    userId: trade.user_id,
-    tradeId,
-    pnl: finalPnl,
-    newBalance,
-    asset: trade.asset,
-    exitPrice: finalExitPrice,
-    reason
-  };
-  await redis.publish('xfx:notifications', JSON.stringify(closeMessage));
 }
 
 // Define an in-memory cache for candles to avoid parsing JSON strings on every tick
