@@ -300,17 +300,20 @@ export default function Dashboard({ toggleTheme, theme }: DashboardProps) {
     const params = new URLSearchParams(window.location.search);
     const modal = params.get('modal');
     if (modal) {
-      if (modal === 'deposit') setShowDepositModal(true);
-      else if (modal === 'withdraw') setShowWithdrawModal(true);
+      if (modal === 'deposit') {
+        setShowDepositModal(true);
+        navigate('/dashboard', { replace: true });
+      }
+      else if (modal === 'withdraw') {
+        setShowWithdrawModal(true);
+        navigate('/dashboard', { replace: true });
+      }
       else if (modal === 'history') {
-        fetchWalletHistory();
-        setShowHistoryModal(true);
+        navigate('/transactions', { replace: true });
       }
       else if (modal === 'insights') {
-        fetchInsights();
-        setShowInsightsModal(true);
+        navigate('/insights', { replace: true });
       }
-      navigate('/dashboard', { replace: true });
     }
 
     const interval = setInterval(() => {
@@ -627,26 +630,20 @@ export default function Dashboard({ toggleTheme, theme }: DashboardProps) {
 
               {/* Navigation Links */}
               <div className="flex flex-col gap-2.5 text-xs font-semibold text-light-primary dark:text-[#D1D4DC]">
-                <button
-                  onClick={() => {
-                    fetchWalletHistory();
-                    setShowHistoryModal(true);
-                    setShowMobileDrawer(false);
-                  }}
+                <Link
+                  to="/transactions"
+                  onClick={() => setShowMobileDrawer(false)}
                   className="text-left py-2 px-3 hover:bg-light-panel dark:hover:bg-[#2A2E39] rounded-xl flex items-center gap-2"
                 >
                   📁 Transaction History
-                </button>
-                <button
-                  onClick={() => {
-                    fetchInsights();
-                    setShowInsightsModal(true);
-                    setShowMobileDrawer(false);
-                  }}
+                </Link>
+                <Link
+                  to="/insights"
+                  onClick={() => setShowMobileDrawer(false)}
                   className="text-left py-2 px-3 hover:bg-light-panel dark:hover:bg-[#2A2E39] rounded-xl flex items-center gap-2"
                 >
                   💡 Market Insights
-                </button>
+                </Link>
                 <Link
                   to="/p2p"
                   onClick={() => setShowMobileDrawer(false)}
@@ -800,25 +797,19 @@ export default function Dashboard({ toggleTheme, theme }: DashboardProps) {
           </button>
 
           {/* History & Insights shortcut buttons (Desktop only) */}
-          <button
-            onClick={() => {
-              fetchWalletHistory();
-              setShowHistoryModal(true);
-            }}
-            className="hidden md:block px-3 py-2 bg-light-panel dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-primary dark:text-[#D1D4DC] font-bold rounded-xl text-xs hover:opacity-90"
+          <Link
+            to="/transactions"
+            className="hidden md:block px-3 py-2 bg-light-panel dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-primary dark:text-[#D1D4DC] font-bold rounded-xl text-xs hover:opacity-90 text-center"
           >
             History
-          </button>
+          </Link>
 
-          <button
-            onClick={() => {
-              fetchInsights();
-              setShowInsightsModal(true);
-            }}
-            className="hidden md:block px-3 py-2 bg-light-panel dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-primary dark:text-[#D1D4DC] font-bold rounded-xl text-xs hover:opacity-90 animate-pulse"
+          <Link
+            to="/insights"
+            className="hidden md:block px-3 py-2 bg-light-panel dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-primary dark:text-[#D1D4DC] font-bold rounded-xl text-xs hover:opacity-90 animate-pulse text-center"
           >
             Insights
-          </button>
+          </Link>
 
           {user?.role === 'admin' && (
             <Link
@@ -881,16 +872,13 @@ export default function Dashboard({ toggleTheme, theme }: DashboardProps) {
                   Terms & Services
                 </Link>
 
-                <button
-                  onClick={() => {
-                    fetchWalletHistory();
-                    setShowHistoryModal(true);
-                    setShowProfileDropdown(false);
-                  }}
+                <Link
+                  to="/transactions"
+                  onClick={() => setShowProfileDropdown(false)}
                   className="w-full text-left py-2 px-3 hover:bg-light-panel dark:hover:bg-[#2A2E39] rounded-xl text-xs font-bold text-light-primary dark:text-[#D1D4DC] flex items-center gap-2"
                 >
                   Transaction History
-                </button>
+                </Link>
 
                 <button
                   onClick={() => {
@@ -1666,107 +1654,6 @@ export default function Dashboard({ toggleTheme, theme }: DashboardProps) {
         </div>
       )}
 
-      {/* 6. Transaction History Modal Overlay */}
-      {showHistoryModal && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-          <div className="w-full max-w-2xl h-[500px] bg-white dark:bg-[#1E222D] border border-light-border dark:border-[#2A2E39] rounded-3xl shadow-2xl relative flex flex-col overflow-hidden">
-            <button
-              onClick={() => setShowHistoryModal(false)}
-              className="absolute top-4 right-4 text-light-secondary dark:text-[#8A91A5] hover:text-white font-bold z-[100]"
-            >
-              ✕
-            </button>
-
-            <div className="px-6 py-4 border-b border-light-border dark:border-[#2A2E39]">
-              <h3 className="text-lg font-extrabold text-light-primary dark:text-[#D1D4DC]">Transaction Logs</h3>
-              <p className="text-[10px] text-light-secondary dark:text-[#8A91A5]">Full history of deposits, withdrawals, and broker applications</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              {walletHistory.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-light-secondary dark:text-[#8A91A5] text-xs">
-                  No transaction records found.
-                </div>
-              ) : (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-light-border dark:border-[#2A2E39] text-light-secondary dark:text-[#8A91A5] uppercase font-bold text-[10px]">
-                      <th className="py-2.5">Date</th>
-                      <th className="py-2.5">Type</th>
-                      <th className="py-2.5">Amount</th>
-                      <th className="py-2.5">Gateway</th>
-                      <th className="py-2.5">Status</th>
-                      <th className="py-2.5">Approved At</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-light-border/40 dark:divide-dark-border/20 font-mono text-[11px] text-light-primary dark:text-[#D1D4DC]">
-                    {walletHistory.map((h) => (
-                      <tr key={h.id} className="hover:bg-light-panel dark:hover:bg-dark-bg/25">
-                        <td className="py-3">{new Date(h.created_at).toLocaleDateString()}</td>
-                        <td className="py-3">
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase ${h.type === 'deposit' ? 'bg-[#089981]/10 text-[#089981]' : 'bg-[#F23645]/10 text-[#F23645]'
-                            }`}>
-                            {h.type}
-                          </span>
-                        </td>
-                        <td className="py-3 font-bold">${Number(h.amount).toFixed(2)}</td>
-                        <td className="py-3 capitalize">{h.payment_method}</td>
-                        <td className="py-3">
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold capitalize ${h.status === 'approved' ? 'bg-[#089981]/10 text-[#089981]' :
-                            h.status === 'pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-[#F23645]/10 text-[#F23645]'
-                            }`}>
-                            {h.status}
-                          </span>
-                        </td>
-                        <td className="py-3 text-[10px] text-light-secondary dark:text-[#8A91A5]">
-                          {h.approved_at ? new Date(h.approved_at).toLocaleString() : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 7. Market Insights Modal Overlay */}
-      {showInsightsModal && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-          <div className="w-full max-w-2xl h-[500px] bg-white dark:bg-[#1E222D] border border-light-border dark:border-[#2A2E39] rounded-3xl shadow-2xl relative flex flex-col overflow-hidden">
-            <button
-              onClick={() => setShowInsightsModal(false)}
-              className="absolute top-4 right-4 text-light-secondary dark:text-[#8A91A5] hover:text-white font-bold z-[100]"
-            >
-              ✕
-            </button>
-
-            <div className="px-6 py-4 border-b border-light-border dark:border-[#2A2E39]">
-              <h3 className="text-lg font-extrabold text-light-primary dark:text-[#D1D4DC]">Market Insights & Analyst Reports</h3>
-              <p className="text-[10px] text-light-secondary dark:text-[#8A91A5]">Keep track of market trends and official publications</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {insights.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-light-secondary dark:text-[#8A91A5] text-xs">
-                  No analyst reports published yet.
-                </div>
-              ) : (
-                insights.map((ins) => (
-                  <div key={ins.id} className="p-4 bg-light-panel dark:bg-[#1E222D] border border-light-border dark:border-[#2A2E39] rounded-2xl">
-                    <h4 className="font-extrabold text-sm mb-1 text-[#2962FF]">{ins.title}</h4>
-                    <p className="text-xs text-light-primary dark:text-[#D1D4DC] leading-relaxed mb-3">{ins.content}</p>
-                    <div className="text-[9px] text-light-secondary dark:text-[#8A91A5] font-mono">
-                      Published: {new Date(ins.created_at).toLocaleString()}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Footer access links */}
       <footer className="py-4 border-t border-light-border dark:border-dark-border/40 text-center text-[10px] text-light-secondary dark:text-dark-secondary bg-light-panel dark:bg-dark-panel flex-shrink-0">

@@ -1,4 +1,74 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">
-  <rect width="24" height="24" rx="6" fill="#2962FF"/>
-  <text x="12" y="17" font-family="'Inter', sans-serif" font-weight="900" font-size="14" fill="#FFFFFF" text-anchor="middle">X</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0e14" />
+      <stop offset="50%" stop-color="#111622" />
+      <stop offset="100%" stop-color="#1a2235" />
+    </linearGradient>
+
+    <!-- Metallic Gold/Teal Text Gradients -->
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2962FF" />
+      <stop offset="100%" stop-color="#00E5FF" />
+    </linearGradient>
+    
+    <linearGradient id="secondaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#089981" />
+      <stop offset="100%" stop-color="#00F5FF" />
+    </linearGradient>
+
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700" />
+      <stop offset="100%" stop-color="#FF9100" />
+    </linearGradient>
+
+    <!-- Subtle Glow Filter -->
+    <filter id="glowFilter" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Style overrides for fonts and text shadow -->
+    <style>
+      .brand-text {
+        font-family: 'Outfit', 'Inter', 'Montserrat', 'Segoe UI', sans-serif;
+        font-weight: 900;
+        text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      }
+    </style>
+  </defs>
+
+  <!-- Background squircle (Premium trading interface style) -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGradient)" stroke="#2A2E39" stroke-width="6"/>
+
+  <!-- Decorative digital tech rings and coordinates grid -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#2A2E39" stroke-width="1.5" stroke-opacity="0.3"/>
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#2a3245" stroke-width="1" stroke-dasharray="8 6" stroke-opacity="0.4"/>
+  <path d="M50 256 H462 M256 50 V462" stroke="#2A2E39" stroke-width="1" stroke-opacity="0.2"/>
+
+  <!-- Overlapping letters of "ExtFx" -->
+  <g class="brand-text" filter="url(#glowFilter)">
+    <!-- 'E' (Vibrant Gradient Accent) -->
+    <text x="80" y="310" font-size="160" fill="url(#primaryGrad)" opacity="0.9">E</text>
+
+    <!-- 'x' (Deep Emerald/Teal overlap) -->
+    <text x="165" y="310" font-size="140" fill="url(#secondaryGrad)" opacity="0.85">x</text>
+
+    <!-- 't' (Bright clean white center pillar) -->
+    <text x="240" y="310" font-size="150" fill="#FFFFFF" opacity="0.95">t</text>
+
+    <!-- 'F' (Primary Branding Accent Blue) -->
+    <text x="305" y="310" font-size="165" fill="url(#primaryGrad)" opacity="0.9">F</text>
+
+    <!-- 'x' (Secondary Glow Teal) -->
+    <text x="385" y="310" font-size="140" fill="url(#secondaryGrad)" opacity="0.85">x</text>
+  </g>
+
+  <!-- Elegant underline accentuating the overlapping letters -->
+  <rect x="100" y="345" width="312" height="10" rx="5" fill="url(#primaryGrad)" opacity="0.9"/>
+  <circle cx="422" cy="350" r="5" fill="#00E5FF"/>
 </svg>

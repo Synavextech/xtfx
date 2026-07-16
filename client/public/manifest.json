@@ -1,6 +1,6 @@
 {
-  "name": "Extfx - ExtremeTrader",
-  "short_name": "Extfx",
+  "name": "ExtFx - ExtremeFxTrader",
+  "short_name": "ExtFx",
   "description": "Extreme Trader - Forex, Cryptos, Synthetics 24/7",
   "start_url": "/",
   "display": "standalone",
